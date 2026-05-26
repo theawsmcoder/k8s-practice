@@ -1,2 +1,4 @@
-fastapi
-uvicorn
+fastapi==0.136.1
+uvicorn[standard]
+sqlmodel==0.0.38
+asyncpg==0.31.0

@@ -1,63 +1,101 @@
 import os
-from fastapi import FastAPI
-from pydantic import BaseModel
+from contextlib import asynccontextmanager
 
+from fastapi import FastAPI, Depends, HTTPException
+from sqlmodel import SQLModel, select, Field
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel.ext.asyncio.session import AsyncSession
+from typing import Optional
 import uvicorn
 
-class Object(BaseModel):
-    id: int
+# create a simple base model 
+class ObjectBase(SQLModel):
     name: str
 
-app = FastAPI()
+# create a database schema out of the above model
+class Object(ObjectBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
 
-temp_data = {}
+# create an engine to interact with the db
+engine = create_async_engine(os.getenv("POSTGRES_URL"))
+
+# yield a separate session for each query
+async def get_session():
+    async with AsyncSession(engine, expire_on_commit=False) as sess:
+        yield sess
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # things to do before app initializes
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    
+    yield
+    # things to do before closing the app
+    await engine.dispose()
+
+app = FastAPI(title=os.getenv("APP_NAME"), lifespan=lifespan)
 
 @app.get("/")
 async def root():
     return {"app": os.getenv("APP_NAME")}
 
+# for health check 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
+# for configmaps
 @app.get("/config")
 async def config():
     return {
-        "db_host": os.getenv("DB_HOST"),
+        "db_host": os.getenv("POSTGRES_USER"),
         "log_level": os.getenv("LOG_LEVEL"),
         "env": os.getenv("APP_ENV")
     }
 
+# for secrets
 @app.get("/secret")
 async def secret():
     return {
-        "db_password": os.getenv("DB_PASSWORD"),
+        "db_password": os.getenv("POSTGRES_PASSWORD"),
         "api_key": os.getenv("API_KEY")
     }
 
+# to intentionally crash the pod
 @app.get("/crash")
 async def crash():
-    return os._exit(1)
+    os._exit(1)
 
+# to test storage related stuff
 @app.get("/objects")
-async def get_all_objects():
-    return temp_data
+async def get_all_objects(db_session: AsyncSession = Depends(get_session)):
+    results = await db_session.exec(select(Object))
+    return results.all()
 
 @app.get("/objects/{obj_id}")
-async def get_object(obj_id: int):
-    return {
-        obj_id: str(temp_data[obj_id])
-        }
+async def get_object(obj_id: int, db_session: AsyncSession = Depends(get_session)):
+    result = await db_session.get(Object, obj_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="object not found")
+    return result
 
 @app.delete("/objects/{obj_id}")
-async def get_object(obj_id: int):
-    return temp_data.pop(obj_id) 
+async def delete_object(obj_id: int, db_session: AsyncSession = Depends(get_session)):
+    temp = await db_session.get(Object, obj_id)
+    if not temp:
+        raise HTTPException(status_code=404, detail="object not found")
+    await db_session.delete(temp)
+    await db_session.commit()
+    return {"deleted": obj_id}
 
 @app.post("/objects")
-async def create_object(obj: Object):
-    temp_data[obj.id] = obj.name
-    return obj
-
+async def create_object(obj: Object, db_session: AsyncSession = Depends(get_session)):
+    temp = Object(name=obj.name)
+    db_session.add(temp)
+    await db_session.commit()
+    await db_session.refresh(temp)
+    return temp
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
