@@ -1,0 +1,11 @@
+apiVersion: v1 
+kind: ConfigMap 
+metadata: 
+  name: fastapi-config
+  namespace: k8s-dev
+data: 
+  APP_ENV: dev
+  APP_NAME: k8s-test-app
+  LOG_LEVEL: info
+  POSTGRES_USER: testusr
+  POSTGRES_DB: testdb

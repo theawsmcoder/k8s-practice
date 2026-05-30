@@ -19,10 +19,15 @@ spec:
     spec:
       containers: 
         - name: k8s-test-app 
-          image: k8s-test 
+          image: k8s-test:v1
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: fastapi-config
+            - secretRef:
+                name: fastapi-secret
           resources: 
             requests: 
               cpu: "128m"

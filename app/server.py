@@ -17,6 +17,7 @@ class Object(ObjectBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
 # create an engine to interact with the db
+print("USER DEBUG: " + os.getenv("POSTGRES_URL"))
 engine = create_async_engine(os.getenv("POSTGRES_URL"))
 
 # yield a separate session for each query
