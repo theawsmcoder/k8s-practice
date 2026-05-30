@@ -1,0 +1,69 @@
+apiVersion: apps/v1 
+kind: StatefulSet 
+metadata:
+  name: postgres-db-app
+  namespace: k8s-dev
+  labels: 
+    app: postgres-db-app
+spec:
+  serviceName: postgres-headless-svc
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-db-app
+  template:
+    metadata:
+      labels:
+        app: postgres-db-app
+    spec:
+      containers:
+        - name: postgres-db-app 
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres-db-port
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "128m"
+              memory: "256Mi"
+            limits: 
+              cpu: "256m"
+              memory: "512Mi"
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - testusr 
+                - -d 
+                - testdb 
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - testusr 
+                - -d 
+                - testdb
+            initialDelaySeconds: 30
+            periodSeconds: 15
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data 
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ""
+        resources:
+          requests:
+            storage: 1Gi
+
+
