@@ -6,3 +6,4 @@
 **/*.pyo
 **/*.pyd
 secret.yaml
+*secret*

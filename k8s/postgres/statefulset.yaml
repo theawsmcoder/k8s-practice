@@ -28,6 +28,13 @@ spec:
           # envFrom:
           #   - secretRef:
           #       name: postgres-secret
+          env:
+            - name: POSTGRES_PASSWORD_FILE
+              value: /etc/secrets/POSTGRES_PASSWORD
+            - name: POSTGRES_USER_FILE
+              value: /etc/secrets/POSTGRES_USER
+            - name: POSTGRES_DB_FILE
+              value: /etc/secrets/POSTGRES_DB
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
