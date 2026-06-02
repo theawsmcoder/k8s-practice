@@ -19,7 +19,7 @@ spec:
     spec:
       containers: 
         - name: k8s-test-app 
-          image: k8s-test:v1
+          image: k8s-test:v2
           # use 'minikube docker-env | Invoke-Expression'
           imagePullPolicy: Never
           ports:

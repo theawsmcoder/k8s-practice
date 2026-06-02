@@ -9,14 +9,17 @@ from typing import Optional
 import uvicorn
 
 
-secrets_dir = "/etc/secrets/"
+secrets_dir = "/etc/secrets"
 secrets_dict = {}
 
 for file_name in os.listdir(secrets_dir):
     path = os.path.join(secrets_dir, file_name)
     if os.path.isfile(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            secrets_dict[file_name] = f.read().strip()
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                secrets_dict[file_name] = f.read().strip()
+        except Exception:
+            print(f"couldnt read file: {file_name}")
 
 print(secrets_dict)
 
@@ -31,7 +34,11 @@ class Object(ObjectBase, table=True):
 # create an engine to interact with the db
 # print("USER DEBUG: " + os.getenv("POSTGRES_URL"))
 # print("USER DEBUG: " + secrets_dict["POSTGRES_URL"])
-engine = create_async_engine(secrets_dict["POSTGRES_URL"])
+engine_url = secrets_dict.get("POSTGRES_URL")
+if not engine_url:
+    raise Exception(f"engine url empty")
+
+engine = create_async_engine(engine_url)
 
 # yield a separate session for each query
 async def get_session():
@@ -72,8 +79,8 @@ async def config():
 @app.get("/secret")
 async def secret():
     return {
-        "db_password": secrets_dict["POSTGRES_PASSWORD"],
-        "api_key": secrets_dict["API_KEY"]
+        "db_password": secrets_dict.get("POSTGRES_PASSWORD"),
+        "api_key": secrets_dict.get("API_KEY")
     }
 
 # to intentionally crash the pod
