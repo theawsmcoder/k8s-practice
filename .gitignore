@@ -5,5 +5,5 @@
 **/*.pyc
 **/*.pyo
 **/*.pyd
-secret.yaml
-*secret*
+# secret.yaml
+# *secret*
