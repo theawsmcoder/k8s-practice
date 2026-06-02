@@ -8,6 +8,18 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import Optional
 import uvicorn
 
+
+secrets_dir = "/etc/secrets/"
+secrets_dict = {}
+
+for file_name in os.listdir(secrets_dir):
+    path = os.path.join(secrets_dir, file_name)
+    if os.path.isfile(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            secrets_dict[file_name] = f.read().strip()
+
+print(secrets_dict)
+
 # create a simple base model 
 class ObjectBase(SQLModel):
     name: str
@@ -17,8 +29,9 @@ class Object(ObjectBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
 # create an engine to interact with the db
-print("USER DEBUG: " + os.getenv("POSTGRES_URL"))
-engine = create_async_engine(os.getenv("POSTGRES_URL"))
+# print("USER DEBUG: " + os.getenv("POSTGRES_URL"))
+# print("USER DEBUG: " + secrets_dict["POSTGRES_URL"])
+engine = create_async_engine(secrets_dict["POSTGRES_URL"])
 
 # yield a separate session for each query
 async def get_session():
@@ -59,8 +72,8 @@ async def config():
 @app.get("/secret")
 async def secret():
     return {
-        "db_password": os.getenv("POSTGRES_PASSWORD"),
-        "api_key": os.getenv("API_KEY")
+        "db_password": secrets_dict["POSTGRES_PASSWORD"],
+        "api_key": secrets_dict["API_KEY"]
     }
 
 # to intentionally crash the pod
@@ -99,4 +112,5 @@ async def create_object(obj: Object, db_session: AsyncSession = Depends(get_sess
     return temp
 
 if __name__ == "__main__":
+    print(secrets_dict)
     uvicorn.run(app, host="0.0.0.0", port=8080)

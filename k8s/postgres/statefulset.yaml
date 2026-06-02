@@ -16,17 +16,24 @@ spec:
       labels:
         app: postgres-db-app
     spec:
+      volumes: 
+        - name: secret-volume
+          secret: 
+            secretName: postgres-secret
       containers:
         - name: postgres-db-app 
           image: postgres:17-alpine
           ports:
             - containerPort: 5432
-          envFrom:
-            - secretRef:
-                name: postgres-secret
+          # envFrom:
+          #   - secretRef:
+          #       name: postgres-secret
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+            - name: secret-volume
+              mountPath: /etc/secrets
+              readOnly: true
           resources:
             requests:
               cpu: "128m"
@@ -64,5 +71,6 @@ spec:
         resources:
           requests:
             storage: 1Gi
+  
 
 

@@ -20,14 +20,22 @@ spec:
       containers: 
         - name: k8s-test-app 
           image: k8s-test:v1
+          # use 'minikube docker-env | Invoke-Expression'
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
+          env: # apparently helps with displaying print statements in logs
+            - name: PYTHONUNBUFFERED
+              value: "1"
           envFrom:
             - configMapRef:
                 name: fastapi-config
-            - secretRef:
-                name: fastapi-secret
+            # - secretRef:
+            #     name: fastapi-secret
+          volumeMounts:
+            - name: fastapi-secret-vol
+              mountPath: /etc/secrets
+              readOnly: true
           resources: 
             requests: 
               cpu: "128m"
@@ -35,3 +43,7 @@ spec:
             limits:
               cpu: "256m"
               memory: "256Mi"
+      volumes:
+        - name: fastapi-secret-vol
+          secret:
+            secretName: fastapi-secret
