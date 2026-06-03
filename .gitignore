@@ -5,5 +5,8 @@
 **/*.pyc
 **/*.pyo
 **/*.pyd
+*.csr
+*.key
+*.crt
 # secret.yaml
 # *secret*
